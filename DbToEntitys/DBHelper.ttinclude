@@ -1,0 +1,420 @@
+﻿<#@ import namespace="System"#>
+<#@ import namespace="System.Collections.Generic"#>
+<#@ import namespace="System.Data"#>
+<#@ import namespace="System.Data.SqlClient"#>
+<#@ import namespace="System.Linq"#>
+<#@ import namespace="System.Text"#>
+<#@ import namespace="System.Threading.Tasks"#>
+<#+
+
+public class DBHelper
+{
+    //db connectstring
+    public const string connStr = "Data Source=***;Initial Catalog=***;uid=***;pwd=***;Pooling=true;Max Pool Size=1024;Min Pool Size=5;";
+    //Entity‘s namespace
+    public static string EntityNameSpace = "Itfers.Entitys.Bet";
+
+
+    /// <summary>
+    /// Query Sql
+    /// </summary>
+    /// <param name="cmdText">SQL语句</param>
+    /// <returns>ds</returns>
+    public static DataSet ExecuteQuery(string cmdText)
+    {
+        using (SqlConnection conn = new SqlConnection(connStr))
+        {
+            DataSet ds = new DataSet();
+            try
+            {
+                conn.Open();
+                SqlDataAdapter da = new SqlDataAdapter(cmdText, conn);
+                da.Fill(ds, "ds");
+            }
+            catch (System.Data.SqlClient.SqlException e)
+            {
+                //conn.Close();
+                throw new Exception(e.Message);
+            }
+            finally
+            {
+                conn.Dispose();
+                conn.Close();
+            }
+            return ds;
+        }
+    }
+
+    /// <summary>
+    /// query table's columns detail infomation
+    /// </summary>
+    /// <param name="tbName">tableName</param>
+    /// <returns></returns>
+    public static List<DBModel> GetDBmodel(string tbName)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.Append("SELECT");
+        sb.Append("  table_name       = Case When A.colorder=1 Then D.name Else '' End,");
+        sb.Append("  table_Directions     = Case When A.colorder=1 Then isnull(F.value,'') Else '' End,");
+        sb.Append("  field_index   = A.colorder,");
+        sb.Append("  field_name     = A.name,");
+        sb.Append("  field_Directions   = isnull(G.[value],''),");
+        sb.Append("  tag       = Case When COLUMNPROPERTY( A.id,A.name,'IsIdentity')=1 Then '√'Else '' End,");
+        sb.Append("  iskey       = Case When exists(SELECT 1 FROM sysobjects Where xtype='PK' and parent_obj=A.id and name in (");
+        sb.Append("  SELECT name FROM sysindexes WHERE indid in( SELECT indid FROM sysindexkeys WHERE id = A.id AND colid=A.colid))) then 'True' else 'False' end,");
+        sb.Append("  field_type       = B.name,");
+        sb.Append("  field_size = A.Length,");
+        sb.Append("  field_length       = COLUMNPROPERTY(A.id,A.name,'PRECISION')");
+        sb.Append("  FROM");
+        sb.Append("  syscolumns A");
+        sb.Append("  Left Join");
+        sb.Append("  systypes B");
+        sb.Append("  On");
+        sb.Append("  A.xusertype=B.xusertype");
+        sb.Append("  Inner Join");
+        sb.Append("  sysobjects D");
+        sb.Append("  On");
+        sb.Append("  A.id=D.id  and D.xtype='U' and  D.name<>'dtproperties'");
+        sb.Append("  Left Join");
+        sb.Append("  syscomments E");
+        sb.Append("  On");
+        sb.Append("  A.cdefault=E.id");
+        sb.Append("  Left Join");
+        sb.Append("  sys.extended_properties  G");
+        sb.Append("  On");
+        sb.Append("  A.id=G.major_id and A.colid=G.minor_id");
+        sb.Append("  Left Join");
+        sb.Append("  sys.extended_properties F");
+        sb.Append("  On");
+        sb.Append("  D.id=F.major_id and F.minor_id=0");
+        sb.Append(string.Format("  where d.name='{0}'", tbName));
+        sb.Append("  Order By");
+        sb.Append("  A.id,A.colorder");
+        DataSet ds = ExecuteQuery(sb.ToString());
+        List<DBModel> list = new List<DBModel>();
+        if (ds.Tables[0].Rows.Count > 0)
+        {
+            for (int i = 0; i < ds.Tables[0].Rows.Count; i++)
+            {
+                string table_name, table_Directions, field_name, field_Directions, tag, field_type;
+                int field_index, field_size, field_length;
+                bool iskey;
+                if (string.IsNullOrEmpty(ds.Tables[0].Rows[i]["iskey"].ToString()))
+                {
+                    iskey = false;
+                }
+                else
+                {
+                    iskey = ds.Tables[0].Rows[i]["iskey"].ToString() == "True" ? true : false;
+                }
+                if (string.IsNullOrEmpty(ds.Tables[0].Rows[i]["field_index"].ToString()))
+                {
+                    field_index = 0;
+                }
+                else
+                {
+                    field_index = Convert.ToInt32(ds.Tables[0].Rows[i]["field_index"].ToString());
+                }
+                if (string.IsNullOrEmpty(ds.Tables[0].Rows[i]["field_size"].ToString()))
+                {
+                    field_size = 0;
+                }
+                else
+                {
+                    field_size = Convert.ToInt32(ds.Tables[0].Rows[i]["field_size"].ToString());
+                }
+                if (string.IsNullOrEmpty(ds.Tables[0].Rows[i]["field_length"].ToString()))
+                {
+                    field_length = 0;
+                }
+                else
+                {
+                    field_length = Convert.ToInt32(ds.Tables[0].Rows[i]["field_length"].ToString());
+                }
+                if (string.IsNullOrEmpty(ds.Tables[0].Rows[i]["table_name"].ToString()))
+                {
+                    table_name = string.Empty;
+                }
+                else
+                {
+                    table_name = ds.Tables[0].Rows[i]["table_name"].ToString();
+                }
+                if (string.IsNullOrEmpty(ds.Tables[0].Rows[i]["table_Directions"].ToString()))
+                {
+                    table_Directions = string.Empty;
+                }
+                else
+                {
+                    table_Directions = ds.Tables[0].Rows[i]["table_Directions"].ToString();
+                }
+                if (string.IsNullOrEmpty(ds.Tables[0].Rows[i]["field_name"].ToString()))
+                {
+                    field_name = string.Empty;
+                }
+                else
+                {
+                    field_name = ds.Tables[0].Rows[i]["field_name"].ToString();
+                }
+                if (string.IsNullOrEmpty(ds.Tables[0].Rows[i]["field_Directions"].ToString()))
+                {
+                    field_Directions = string.Empty;
+                }
+                else
+                {
+                    field_Directions = ds.Tables[0].Rows[i]["field_Directions"].ToString();
+                }
+                if (string.IsNullOrEmpty(ds.Tables[0].Rows[i]["tag"].ToString()))
+                {
+                    tag = string.Empty;
+                }
+                else
+                {
+                    tag = ds.Tables[0].Rows[i]["tag"].ToString();
+                }
+                if (string.IsNullOrEmpty(ds.Tables[0].Rows[i]["field_type"].ToString()))
+                {
+                    field_type = string.Empty;
+                }
+                else
+                {
+                    field_type = ds.Tables[0].Rows[i]["field_type"].ToString();
+                }
+                list.Add(new DBModel()
+                {
+                    table_name = table_name,
+                    table_Directions = table_Directions,
+                    field_name = field_name,
+                    field_Directions = field_Directions,
+                    tag = tag,
+                    field_type = field_type,
+                    field_index = field_index,
+                    field_size = field_size,
+                    field_length = field_length,
+                    iskey = iskey
+                });
+            }
+        }
+        return list;
+    }
+    public static List<TableModel> GetTables()
+    {
+        List<TableModel> tables = new List<TableModel>();
+        string sql = @"SELECT t.name,f.value AS tableDesc FROM sys.tables t
+INNER JOIN sys.extended_properties f ON t.object_id = f.major_id  AND minor_id = 0
+WHERE t.type = 'U'";
+        DataSet ds = ExecuteQuery(sql);
+        if(ds!=null && ds.Tables[0]!=null && ds.Tables[0].Rows.Count>0)
+        {
+            DataTable dt = ds.Tables[0];
+            int rowCount = ds.Tables[0].Rows.Count;
+            for (int i = 0; i < rowCount; i++)
+            {
+                tables.Add(new TableModel() { name= dt.Rows[i]["name"].ToString(),tableDesc= dt.Rows[i]["tableDesc"].ToString() });
+            }
+        }
+        return tables;
+    }
+}
+/// <summary>
+/// Table-Model
+/// </summary>
+public class TableModel
+{
+    public string name { get; set; }
+    public string tableDesc { get; set; }
+}
+/// <summary>
+/// Table's Column Model
+/// </summary>
+public class DBModel
+{
+    /// <summary>
+    /// 表名
+    /// </summary>
+    public string table_name { get; set; }
+    /// <summary>
+    /// 表说明
+    /// </summary>
+    public string table_Directions { get; set; }
+    /// <summary>
+    /// 字段序号
+    /// </summary>
+    public int field_index { get; set; }
+    /// <summary>
+    /// 字段名
+    /// </summary>
+    public string field_name { get; set; }
+    /// <summary>
+    /// 字段说明
+    /// </summary>
+    public string field_Directions { get; set; }
+    /// <summary>
+    /// 标识
+    /// </summary>
+    public string tag { get; set; }
+    /// <summary>
+    /// 是否主键
+    /// </summary>
+    public bool iskey { get; set; }
+    /// <summary>
+    /// 类别
+    /// </summary>
+    public string field_type { get; set; }
+    /// <summary>
+    /// 占用字节
+    /// </summary>
+    public int field_size { get; set; }
+    /// <summary>
+    /// 长度
+    /// </summary>
+    public int field_length { get; set; }
+    public string GetFiledType()
+    {
+        string type = "string";
+        switch (this.field_type)
+        {
+            case "nvarchar":
+            case "varchar":
+            case "nchar":
+            case "char":
+                type = "string";
+                break;
+            case "decimal":
+            case "numeric":
+                type = "decimal";
+                break;
+            case "bigint":
+            case "int":
+                type = "int";
+                break;
+            case "date":
+            case "datetime":
+            case "datetime2":
+                type = "DateTime";
+                break;
+            case "bit":
+                type = "bool";
+                break;
+            default:
+                break;
+        }
+        return type;
+    }
+    public SqlDbType GetSqlDbType()
+    {
+        SqlDbType type = SqlDbType.NVarChar;
+        switch (this.field_type)
+        {
+            case "bigint":
+                type = SqlDbType.BigInt;
+                break;
+            case "binary":
+                type = SqlDbType.Binary;
+                break;
+            case "bit":
+                type = SqlDbType.Bit;
+                break;
+            case "char":
+                type = SqlDbType.Char;
+                break;
+            case "date":
+                type = SqlDbType.Date;
+                break;
+            case "time":
+                type = SqlDbType.Time;
+                break;
+            case "timestamp":
+                type = SqlDbType.Timestamp;
+                break;
+            case "datetime":
+                type = SqlDbType.DateTime;
+                break;
+            case "datetime2":
+                type = SqlDbType.DateTime2;
+                break;
+            case "decimal":
+            case "numeric":
+                type = SqlDbType.Decimal;
+                break;
+            case "float":
+                type = SqlDbType.Float;
+                break;
+            case "image":
+                type = SqlDbType.Image;
+                break;
+            case "int":
+                type = SqlDbType.Int;
+                break;
+            case "money":
+                type = SqlDbType.Money;
+                break;
+            case "nchar":
+                type = SqlDbType.NChar;
+                break;
+            case "ntext":
+                type = SqlDbType.NText;
+                break;
+            case "nvarchar":
+                type = SqlDbType.NVarChar;
+                break;
+            case "varchar":
+                type = SqlDbType.VarChar;
+                break;
+            case "real":
+                type = SqlDbType.Real;
+                break;
+            case "smalldatetime":
+                type = SqlDbType.SmallDateTime;
+                break;
+            case "smallint":
+                type = SqlDbType.SmallInt;
+                break;
+            case "smallmoney":
+                type = SqlDbType.SmallMoney;
+                break;
+            case "sql_variant":
+                type = SqlDbType.Variant;
+                break;
+            case "text":
+                type = SqlDbType.Text;
+                break;
+            case "tinyint":
+                type = SqlDbType.TinyInt;
+                break;
+            case "uniqueidentifier":
+                type = SqlDbType.UniqueIdentifier;
+                break;
+            case "varbinary":
+                type = SqlDbType.VarBinary;
+                break;
+            case "xml":
+                type = SqlDbType.Xml;
+                break;
+            default:
+                break;
+        }
+        return type;
+    }
+    public string GetSqlMember()
+    {
+        string tags = "";
+        string filedType = this.GetFiledType();
+        tags +="DbType = SqlDbType." + this.GetSqlDbType() + ", ";
+        if (!System.String.IsNullOrWhiteSpace(this.tag))
+	    {
+            tags += "IsAutomatic = true, ";
+        }
+        if(this.iskey)
+        {
+            tags += "IsPrimary = true, ";
+        }
+        if(this.field_length>0 && filedType== "string")
+        {
+            tags += "MaxLength = " + this.field_length.ToString() + ", ";
+        }
+        tags = tags.TrimEnd(',', ' ');
+        string sqlMember = $"[SqlMember({tags})]";
+        return sqlMember;
+    }
+}
+#>

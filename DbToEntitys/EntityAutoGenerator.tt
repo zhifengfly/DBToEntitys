@@ -1,0 +1,57 @@
+﻿<#@ template language="C#" debug="True" hostspecific="True" #>
+<#@ output extension=".cs" #>
+<#@ assembly name="System.Data" #>
+<#@ assembly name="System.xml" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="System.Data.SqlClient" #>
+<#@ import namespace="System.Data" #>
+<#@ include file="ModelAuto.ttinclude"#>
+<#@ include file="DBHelper.ttinclude"#>
+<# var manager = new Manager(Host, GenerationEnvironment, true) { OutputPath = Path.GetDirectoryName(Host.TemplateFile)}; #>
+<# 
+    List <TableModel> tables = DBHelper.GetTables();
+ #>
+
+<# 
+    foreach(TableModel table in tables) 
+    {  #>   
+
+     <# 
+		manager.StartBlock(table.name+ ".cs");
+#>
+//----------<#= table.name #>开始----------
+
+using System;
+using System.Data;
+using Itfers.DataBase;
+using System.Linq.Expressions;
+namespace <#=DBHelper.EntityNameSpace#>
+{
+    /// <summary>
+    /// <#= table.tableDesc #>
+    /// </summary>
+    public class <#= table.name #> : SqlTable<<#= table.name #>>
+    {<#
+        List<DBModel> fileds = DBHelper.GetDBmodel(table.name);
+        foreach (DBModel filed in fileds)
+        {#>			
+		/// <summary>
+		/// <#= filed.field_Directions #>
+		/// </summary>
+		<#= filed.GetSqlMember() #>
+		public <#= filed.GetFiledType() #> <#= filed.field_name #> { get; set; }   
+        <# }  #>   
+    }    
+}
+
+    //----------<#=table.name#>结束----------
+
+    <# manager.EndBlock(); #>
+
+<# 
+    } #> 
+
+<#
+    manager.Process(true);
+#>
+
