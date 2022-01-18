@@ -12,7 +12,7 @@ public class DBHelper
     //db connectstring
     public const string connStr = "Data Source=***;Initial Catalog=***;uid=***;pwd=***;Pooling=true;Max Pool Size=1024;Min Pool Size=5;";
     //Entity‘s namespace
-    public static string EntityNameSpace = "Itfers.Entitys.Bet";
+    public static string EntityNameSpace = "Your.Entitys.Namespace";
 
 
     /// <summary>
